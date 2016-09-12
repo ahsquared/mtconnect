@@ -1,0 +1,183 @@
+@function strip-units($value) {
+    @return $value / ($value * 0 + 1);
+}
+
+@function get-vw($target,$ref: $reference-width) { 
+  $vw-context: $ref*.01;
+  @return ($target/$vw-context) * 1vw;
+}
+
+// =============================================================================
+// String Replace
+// =============================================================================
+
+@function str-replace($string, $search, $replace: "") {
+	$index: str-index($string, $search);
+
+	@if $index {
+		@return str-slice($string, 1, $index - 1) + $replace + str-replace(str-slice($string, $index + str-length($search)), $search, $replace);
+	}
+
+	@return $string;
+}
+
+// =============================================================================
+// Font Face
+// =============================================================================
+
+@mixin font-face($name, $path, $weight: null, $style: null, $exts: eot woff2 woff ttf svg) {
+	$src: null;
+
+	$extmods: (
+		eot: "?",
+		svg: "#" + str-replace($name, " ", "_")
+	);
+
+	$formats: (
+		otf: "opentype",
+		ttf: "truetype"
+	);
+
+	@each $ext in $exts {
+		$extmod: if(map-has-key($extmods, $ext), $ext + map-get($extmods, $ext), $ext);
+		$format: if(map-has-key($formats, $ext), map-get($formats, $ext), $ext);
+		$src: append($src, url(quote($path + "." + $extmod)) format(quote($format)), comma);
+	}
+
+	@font-face {
+		font-family: quote($name);
+		font-style: $style;
+		font-weight: $weight;
+		src: $src;
+	}
+}
+
+
+@mixin constrain(){
+	width: 90%;
+	max-width: 673px;
+	margin: 0 auto;
+}
+
+@mixin abs-cover() {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border: none;   
+}
+
+@mixin button-link(){
+	background: transparent !important;
+	box-shadow: none !important;
+	color: $btn-default-bg !important;
+	padding-left: 0;
+	padding-right: 0;
+	font-size: 16px;
+	text-transform: none;
+
+
+	text-shadow: 0 0 #fff,.08em 0 0 #fff,0 0,-.08em 0 0 #fff;
+	transition: all .25s ease-in-out;
+	background: linear-gradient(#a7a9ac,#a7a9ac) center 1.09em no-repeat !important;
+	background-size: 0% 1px !important;
+	background-position: center bottom !important;
+
+	&:hover {
+		color: darken($btn-default-bg-start, 50%) !important;
+		background-size: 100% 1px !important;
+	}
+	&::after {
+		content: ">";
+		position: inline-block;
+		vertical-align: top;
+		margin-left: 10px;
+	}
+}
+
+@mixin photo-border(){
+	border-bottom: 3px solid $btn-default-bg;
+}
+
+@mixin placeholder($color){
+	::-webkit-input-placeholder {
+		color: $color;
+	}
+
+	:-moz-placeholder { /* Firefox 18- */
+		color: $color;  
+	}
+
+	::-moz-placeholder {  /* Firefox 19+ */
+		color: $color;  
+	}
+
+	:-ms-input-placeholder {  
+		color: $color;  
+	}
+}
+
+@mixin headings($from: 1, $to: 6){
+    @for $i from $from through $to{
+      h#{$i}{
+        @content
+      }
+    }
+}
+
+@mixin mobile-only(){
+	@media only screen 
+	  and (max-device-width: 1024px) 
+	  and (-webkit-min-device-pixel-ratio: 2) {
+	  	@content
+	}
+	@media only screen 
+	  and (max-device-width: 1024px) 
+	  and (-webkit-min-device-pixel-ratio: 3) {
+	  	@content
+	}
+}
+
+@mixin button-icon($path) {
+	background-image: url( $path ), $btn-gradient;
+	background-repeat: no-repeat, no-repeat;
+	background-position: right center, top left;
+	&:hover {
+		background-image: url( $path ), $btn-gradient-over;
+		background-repeat: no-repeat, no-repeat;
+		background-position: right center, top left;
+	}
+}
+
+@mixin comp-padding($size,$side: false){
+	$breakpoints: $relative-breakpoints;
+	$width: $size / 100%;
+	@if $side {
+		padding-left: 100vw * $width;
+		padding-right: 100vw * $width;
+		// @media(max-width: nth($breakpoints, 1) - 1){
+		// 	padding-left: nth($breakpoints, 1) * $width;
+		// 	padding-right: nth($breakpoints, 1) * $width;
+		// }
+		// @each $breakpoint in $breakpoints {
+		// 	@media(min-width: $breakpoint){
+		// 		padding-left: $breakpoint * $width;
+		// 		padding-right: $breakpoint * $width;
+		// 	}
+		// }
+	} @else {
+		padding-top: 100vw * $width;
+		padding-bottom: 100vw * $width;
+		// @media(max-width: nth($breakpoints, 1) - 1){
+		// 	padding-top: nth($breakpoints, 1) * $width;
+		// 	padding-bottom: nth($breakpoints, 1) * $width;
+		// }
+		// @each $breakpoint in $breakpoints {
+		// 	@media(min-width: $breakpoint){
+		// 		padding-top: $breakpoint * $width;
+		// 		padding-bottom: $breakpoint * $width;
+		// 	}
+		// }
+	}
+}

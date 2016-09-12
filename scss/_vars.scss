@@ -1,0 +1,96 @@
+//== Scaffolding
+$reference-width: 1366px;
+
+//** Background color for `<body>`.
+$body-bg:               #fff;
+$secondary-bg: 			#000;
+
+$menu-width: 			250px;
+$menu-breakpoints: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2;
+
+$color-primary: 		#484848;
+$color-secondary: 		#6F87A6;
+$color-accent-gray:		#cacaca;
+$color-accent-gray2:	#ebebeb;
+$color-accent-alternate:#888888; // #85BAC8
+$color-brick-red:		#713738;
+
+
+//** Global text color on `<body>`.
+$text-color:            #3b3b3b;
+$text-color-light:      #fff;
+
+//** Global textual link color.
+$link-color:            $color-secondary;
+$link-hover-color: 		$color-brick-red;
+
+
+//== Typography
+$font-family-sans-serif:  "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+$headings-font-family:    "industry",sans-serif;
+$font-weight-light:		  300;
+$font-weight-medium:	  500;
+$font-weight-demi:		  600;
+$font-size-base:          16px;
+$line-height-base:        1.8125;
+$headings-color:          $text-color;
+$headings-color-light:    $body-bg;
+$sub-headings-color:      $secondary-bg;
+
+$font-size-h1:            48px; // ~36px
+$font-size-h2:            33px; // ~30px
+$font-size-h3:            24px; // ~24px
+$font-size-h4:            18px; // ~18px
+$font-size-h5:            $font-size-base !default;
+$font-size-h6:            12px; // ~12px
+
+
+//== Buttons
+$btn-default-color:              $body-bg;
+$btn-default-bg:                 $color-secondary; //#7e9abd
+$btn-default-bg-start:           #748eae;
+$btn-default-bg-end:             $btn-default-bg;
+$btn-default-border:             transparent;
+$btn-gradient: 					 linear-gradient(to bottom,$btn-default-bg-start 0%, $btn-default-bg-end 100%);
+$btn-gradient-over:				 linear-gradient(to bottom,$color-brick-red 0%, $color-brick-red 100%);
+$btn-default-over: 				 $link-hover-color;
+
+$btn-primary-color:              $body-bg;
+$btn-primary-bg:                 $color-primary;
+$btn-primary-border:             $color-accent-alternate;
+$btn-primary-border-over: 		 $color-secondary;
+
+// Other Colors
+$divider-color:                  #d7d7d7;
+$loader-color: 					 $btn-default-bg;
+
+// Component Padding
+$component-padding-side: 10%;
+$component-padding-side-small: $component-padding-side / 4;
+$component-padding-side-large: $component-padding-side * 2;
+$component-padding-medium: 7.14%;
+$component-padding-small: $component-padding-medium / 2;
+$component-padding-large: $component-padding-medium * 2;
+
+// Breakpoints for percentage calc
+$relative-breakpoints: 400px, 768px, 960px, 1400px;
+
+
+// Text Inputs + Textarea
+$input-height: 44px !default;
+$input-border-color: #979797 !default;
+$input-border: 1px solid $input-border-color !default;
+$input-background: #fff !default;
+// $input-error-color: $error-color !default;
+$input-success-color: $color-secondary !default;
+$input-focus-color: $color-secondary !default;
+$input-font-size: 22px !default;
+$input-margin: 0 0 15px 0 !default;
+$input-padding: 0 !default;
+$input-transition: all .3s !default;
+$label-font-size: 9px !default;
+// $input-disabled-color: rgba(0,0,0, .26) !default;
+// $input-disabled-solid-color: #BDBDBD !default;
+// $input-disabled-border: 1px dotted $input-disabled-color !default;
+// $input-invalid-border: 1px solid $input-error-color !default;
+$placeholder-text-color: $input-border-color !default;
