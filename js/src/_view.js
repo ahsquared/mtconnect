@@ -1,7 +1,9 @@
 function listData(componentStream) {
-	let data = [];
+	let data = [],
+		graph = false;
 	if (componentStream.Samples) {
 		data = componentStream.Samples;
+		graph = true;
 	} else if (componentStream.Events) {
 		data = componentStream.Events;
 	} else if (componentStream.Condition) {
@@ -11,8 +13,17 @@ function listData(componentStream) {
 		if (_.isArray(s)) {
 			return h("li", [
 				h("ul.sample", _.chain(s).map(ss => {
-					return h("li.sampleData", ss._dataItemId + ": " + (ss.__text || "N/A"));
-				}).value())
+					return h("li.sampleData", [
+						h("div", ss._dataItemId + ": " + (ss.__text || "N/A")),
+						h("svg#" + ss._dataItemId, {
+							attrs: {
+								"width": "400",
+								"height": "100",
+								"data-val": parseFloat(ss.__text)
+							}
+						})
+					]);
+				}).value()),
 			]);
 		} else {
 			return h("li.sampleData", s._dataItemId + ": " + (s.__text || "N/A"));

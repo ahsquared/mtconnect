@@ -113,7 +113,7 @@ System.register("_actions", [], function(exports_2, context_2) {
         }
     }
 });
-/* global Rx, Redux, ReduxObservable, devToolsExtension, X2JS */
+/* global Rx, Redux, ReduxObservable, devToolsExtension, X2JS, d3 */
 System.register("_config-store", ["_utilities", "_actions"], function(exports_3, context_3) {
     "use strict";
     var __moduleName = context_3 && context_3.id;
@@ -133,7 +133,7 @@ System.register("_config-store", ["_utilities", "_actions"], function(exports_3,
             case _actions_1.ACTIONS.STORE_AGENT_DATA:
                 return Object.assign({}, state, {
                     fetchingData: false,
-                    agentData: x2js.xml_str2json(action.data)
+                    agentData: action.data
                 });
             default:
                 return state;
@@ -153,16 +153,20 @@ System.register("_config-store", ["_utilities", "_actions"], function(exports_3,
             x2js = new X2JS();
             getDataEpic = function (action$) { return action$.ofType(_actions_1.ACTIONS.REQUEST_AGENT_DATA)
                 .concatMap(function () {
-                return Rx.Observable.fromPromise(_utilities_1.getAgentData());
-            }).map(function (data) { return ({
+                return Rx.Observable.timer(0, 500).take(20).concatMap(function () {
+                    return Rx.Observable.fromPromise(_utilities_1.getAgentData());
+                });
+            })
+                .map(function (data) { return ({
                 type: _actions_1.ACTIONS.STORE_AGENT_DATA,
-                data: data
+                data: x2js.xml_str2json(data)
             }); }); };
             epicMiddleware = createEpicMiddleware(getDataEpic);
             initState = {
                 title: "The visualizer",
                 fetchingData: false,
-                agentData: null
+                agentData: null,
+                data: [0]
             };
             exports_3("store", store = createStore(reducer, compose(applyMiddleware(epicMiddleware), window.devToolsExtension ? window.devToolsExtension() : function (f) { return f; })));
             exports_3("store$", store$ = Rx.Observable.from(store));
@@ -173,9 +177,10 @@ System.register("_view", [], function(exports_4, context_4) {
     "use strict";
     var __moduleName = context_4 && context_4.id;
     function listData(componentStream) {
-        var data = [];
+        var data = [], graph = false;
         if (componentStream.Samples) {
             data = componentStream.Samples;
+            graph = true;
         }
         else if (componentStream.Events) {
             data = componentStream.Events;
@@ -187,8 +192,17 @@ System.register("_view", [], function(exports_4, context_4) {
             if (_.isArray(s)) {
                 return h("li", [
                     h("ul.sample", _.chain(s).map(function (ss) {
-                        return h("li.sampleData", ss._dataItemId + ": " + (ss.__text || "N/A"));
-                    }).value())
+                        return h("li.sampleData", [
+                            h("div", ss._dataItemId + ": " + (ss.__text || "N/A")),
+                            h("svg#" + ss._dataItemId, {
+                                attrs: {
+                                    "width": "400",
+                                    "height": "100",
+                                    "data-val": parseFloat(ss.__text)
+                                }
+                            })
+                        ]);
+                    }).value()),
                 ]);
             }
             else {
@@ -228,7 +242,7 @@ System.register("_view", [], function(exports_4, context_4) {
         }
     }
 });
-/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, TweenMax, Stats, console */
+/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, TweenMax, Stats, console */
 System.register("main", ["_actions", "_config-store", "_view"], function(exports_5, context_5) {
     "use strict";
     var __moduleName = context_5 && context_5.id;
@@ -254,6 +268,88 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
         }); });
         return Rx.Observable.merge(update$, getData$);
     }
+    function drawGraph(state, el) {
+        var data = state.data, n = data.length;
+        var svg = d3.select(el), margin = { top: 5, right: 5, bottom: 5, left: 5 }, width = +svg.attr("width") - margin.left - margin.right, height = +svg.attr("height") - margin.top - margin.bottom, g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        var x = d3.scaleLinear()
+            .domain([0, n - 1])
+            .range([0, width]);
+        var y = d3.scaleLinear()
+            .domain([-2, 2])
+            .range([height, 0]);
+        var line = d3.line()
+            .x(function (d, i) {
+            return x(i);
+        })
+            .y(function (d, i) {
+            return y(d);
+        });
+        g.append("defs").append("clipPath")
+            .attr("id", "clip")
+            .append("rect")
+            .attr("width", width)
+            .attr("height", height);
+        g.append("g")
+            .attr("class", "axis axis-x")
+            .attr("transform", "translate(0," + y(0) + ")")
+            .call(d3.axisBottom(x));
+        g.append("g")
+            .attr("class", "axis axis-y")
+            .call(d3.axisLeft(y));
+        g.append("g")
+            .attr("clip-path", "url(#clip)")
+            .append("path")
+            .datum(data)
+            .attr("class", "line")
+            .transition()
+            .duration(500)
+            .ease(d3.easeLinear);
+        function updateGraph(newPoint) {
+            if (newPoint === void 0) { newPoint = 0; }
+            // Push a new data point onto the back.
+            data.push(_.isArray(newPoint) ? newPoint[0] : newPoint);
+            var $line = $(el).find(".line");
+            if ($line.length === 0) {
+                return;
+            }
+            // Redraw the line.
+            d3.select($line[0])
+                .attr("d", line)
+                .attr("transform", null);
+            // Slide it to the left.c
+            d3.active($line[0]) &&
+                d3.active($line[0])
+                    .attr("transform", "translate(" + x(-1) + ",0)")
+                    .transition();
+            n = data.length;
+            if (n < 10) {
+                x = d3.scaleLinear()
+                    .domain([0, n - 1])
+                    .range([0, width]);
+            }
+            else {
+                // Pop the old data point off the front.
+                data.shift();
+            }
+        }
+        return updateGraph;
+    }
+    function updateGraphs() {
+        $("svg").filter(function (i, el) {
+            return $(el).data("updategraph");
+        })
+            .filter(function (i, el) {
+            return Number.isFinite(parseFloat($(el).attr("data-val")));
+        })
+            .each(function (i, el) {
+            $(el).data("updategraph")(parseFloat($(el).attr("data-val")));
+        });
+        $("svg").filter(function (i, el) {
+            return !$(el).data("updategraph");
+        }).each(function (i, el) {
+            $(el).data("updategraph", drawGraph(_config_store_1.store.getState(), el));
+        });
+    }
     return {
         setters:[
             function (_actions_2_1) {
@@ -270,12 +366,14 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
             window.addEventListener('load', function () {
                 var id = "mtconnect";
                 var container = document.getElementById(id);
+                // const updateGraphs = drawGraphs(store.getState());
                 intent().subscribe(function (action) {
                     _config_store_1.store.dispatch(action);
                 });
                 _config_store_1.store$.map(_view_1.view).startWith(container).pairwise().subscribe(function (_a) {
                     var a = _a[0], b = _a[1];
                     patch(a, b);
+                    updateGraphs();
                 });
             });
         }

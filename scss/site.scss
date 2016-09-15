@@ -6,7 +6,6 @@
 @import "font";
 
 #mtconnect {
-	background: #ff0000;
 	.component {
 		margin-left: 20px;
 	}
@@ -16,4 +15,9 @@
 			margin-left: 0;
 		}
 	}
+}
+.line {
+	fill: none;
+	stroke: #000;
+	stroke-width: 1.5px;
 }

@@ -1,4 +1,4 @@
-/* global Rx, Redux, ReduxObservable, devToolsExtension, X2JS */
+/* global Rx, Redux, ReduxObservable, devToolsExtension, X2JS, d3 */
 
 import { delegate, getAgentData } from "./_utilities";
 import { ACTIONS } from "./_actions";
@@ -8,10 +8,13 @@ const x2js = new X2JS();
 
 const getDataEpic = action$ => action$.ofType(ACTIONS.REQUEST_AGENT_DATA)
 	.concatMap(() => {
-		return Rx.Observable.fromPromise(getAgentData())
-	}).map((data) => ({
+		return Rx.Observable.timer(0, 500).take(20).concatMap(() => {
+			return Rx.Observable.fromPromise(getAgentData());
+		});
+	})
+	.map((data) => ({
 		type: ACTIONS.STORE_AGENT_DATA,
-		data: data
+		data: x2js.xml_str2json(data)
 	}));
 
 const epicMiddleware = createEpicMiddleware(getDataEpic);
@@ -19,7 +22,8 @@ const epicMiddleware = createEpicMiddleware(getDataEpic);
 const initState = {
 	title: "The visualizer",
 	fetchingData: false,
-	agentData: null
+	agentData: null,
+	data: [0]
 };
 
 function reducer(state = initState, action) {
@@ -35,7 +39,7 @@ function reducer(state = initState, action) {
 		case ACTIONS.STORE_AGENT_DATA:
 			return Object.assign({}, state, {
 				fetchingData: false,
-				agentData: x2js.xml_str2json(action.data)
+				agentData: action.data,
 			});
 		default:
 			return state;

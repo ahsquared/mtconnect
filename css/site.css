@@ -7644,11 +7644,15 @@ button.picker__today:focus, button.picker__clear:focus, button.picker__close:foc
 .icon-Uptime:before {
   content: "\e91d"; }
 
-#mtconnect {
-  background: #ff0000; }
-  #mtconnect .component {
-    margin-left: 20px; }
-  #mtconnect ul {
-    margin-left: 20px; }
-    #mtconnect ul ul {
-      margin-left: 0; }
+#mtconnect .component {
+  margin-left: 20px; }
+
+#mtconnect ul {
+  margin-left: 20px; }
+  #mtconnect ul ul {
+    margin-left: 0; }
+
+.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1.5px; }

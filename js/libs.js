@@ -4,6 +4,7 @@
 // @codekit-append "/libs/redux-observable.min.js";
 // @codekit-append "/libs/lodash.min.js";
 // @codekit-append "/libs/xml2json.min.js";
+// @codekit-append "/libs/d3.min.js";
 
 // Snabbdom
 // @codekit-append "/libs/snabbdom/snabbdom.min.js";
