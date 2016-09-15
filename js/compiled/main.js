@@ -197,7 +197,7 @@ System.register("_view", [], function(exports_4, context_4) {
                             h("svg#" + ss._dataItemId, {
                                 attrs: {
                                     "width": "400",
-                                    "height": "100",
+                                    "height": "200",
                                     "data-val": parseFloat(ss.__text)
                                 }
                             })
@@ -297,13 +297,12 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
             .attr("class", "axis axis-y")
             .call(d3.axisLeft(y));
         g.append("g")
-            .attr("clip-path", "url(#clip)")
             .append("path")
             .datum(data)
-            .attr("class", "line")
-            .transition()
-            .duration(500)
-            .ease(d3.easeLinear);
+            .attr("class", "line");
+        // .transition()
+        // .duration(500)
+        // .ease(d3.easeLinear);
         function updateGraph(newPoint) {
             if (newPoint === void 0) { newPoint = 0; }
             // Push a new data point onto the back.
@@ -312,25 +311,22 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
             if ($line.length === 0) {
                 return;
             }
-            // Redraw the line.
-            d3.select($line[0])
-                .attr("d", line)
-                .attr("transform", null);
-            // Slide it to the left.c
-            d3.active($line[0]) &&
-                d3.active($line[0])
-                    .attr("transform", "translate(" + x(-1) + ",0)")
-                    .transition();
+            // Slide it to the left
+            // d3.active($line[0])
+            // 	.attr("transform", "translate(" + x(-1) + ",0)")
+            // 	.transition();
             n = data.length;
-            if (n < 10) {
-                x = d3.scaleLinear()
-                    .domain([0, n - 1])
-                    .range([0, width]);
-            }
-            else {
+            x = d3.scaleLinear()
+                .domain([0, n - 1])
+                .range([0, width]);
+            if (n > 10) {
                 // Pop the old data point off the front.
                 data.shift();
             }
+            // Redraw the line.
+            d3.select($line[0])
+                .attr("d", line);
+            // .attr("transform", "translate(" + x(-1) + ",0)");
         }
         return updateGraph;
     }

@@ -65,13 +65,13 @@ function drawGraph(state, el) {
 		.attr("class", "axis axis-y")
 		.call(d3.axisLeft(y));
 	g.append("g")
-		.attr("clip-path", "url(#clip)")
+		//.attr("clip-path", "url(#clip)")
 		.append("path")
 		.datum(data)
 		.attr("class", "line")
-		.transition()
-		.duration(500)
-		.ease(d3.easeLinear);
+		// .transition()
+		// .duration(500)
+		// .ease(d3.easeLinear);
 	function updateGraph(newPoint = 0) {
 		// Push a new data point onto the back.
 		data.push(_.isArray(newPoint) ? newPoint[0] : newPoint);
@@ -79,24 +79,24 @@ function drawGraph(state, el) {
 		if ($line.length === 0) {
 			return;
 		}
-		// Redraw the line.
-		d3.select($line[0])
-			.attr("d", line)
-			.attr("transform", null);
-		// Slide it to the left.c
-		d3.active($line[0]) && 
-		d3.active($line[0])
-			.attr("transform", "translate(" + x(-1) + ",0)")
-			.transition();
+
+		// Slide it to the left
+		// d3.active($line[0])
+		// 	.attr("transform", "translate(" + x(-1) + ",0)")
+		// 	.transition();
 		n = data.length;
-		if (n < 10) {
-			x = d3.scaleLinear()
-				.domain([0, n - 1])
-				.range([0, width]);
-		} else {
+		x = d3.scaleLinear()
+			.domain([0, n - 1])
+			.range([0, width]);
+		if (n > 10) {
 			// Pop the old data point off the front.
 			data.shift();
 		}
+		// Redraw the line.
+		d3.select($line[0])
+			.attr("d", line)
+			// .attr("transform", "translate(" + x(-1) + ",0)");
+
 	}
 
 	return updateGraph;

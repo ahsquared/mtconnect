@@ -18,7 +18,7 @@ function listData(componentStream) {
 						h("svg#" + ss._dataItemId, {
 							attrs: {
 								"width": "400",
-								"height": "100",
+								"height": "200",
 								"data-val": parseFloat(ss.__text)
 							}
 						})
