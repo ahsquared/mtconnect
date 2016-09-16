@@ -15,13 +15,13 @@ function listData(componentStream) {
 				h("ul.sample", _.chain(s).map(ss => {
 					return h("li.sampleData", [
 						h("div", ss._dataItemId + ": " + (ss.__text || "N/A")),
-						h("svg#" + ss._dataItemId, {
-							attrs: {
-								"width": "400",
-								"height": "200",
-								"data-val": parseFloat(ss.__text)
-							}
-						})
+						// h("svg#" + ss._dataItemId, {
+						// 	attrs: {
+						// 		"width": "400",
+						// 		"height": "200",
+						// 		"data-val": parseFloat(ss.__text)
+						// 	}
+						// })
 					]);
 				}).value()),
 			]);

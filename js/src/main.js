@@ -1,4 +1,4 @@
-/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, TweenMax, Stats, console */
+/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, crossfilter, dc, TweenMax, Stats, console */
 
 import {delegate, getAgentData} from "./_utilities";
 import {ACTIONS} from "./_actions";
@@ -31,11 +31,12 @@ function intent() {
 	return Rx.Observable.merge(update$, getData$);
 }
 
-function drawGraph(state, el) {
-	var data = state.data,
-		n = data.length;
-	var svg = d3.select(el),
-		margin = {top: 5, right: 5, bottom: 5, left: 5},
+function drawCharts() {
+	var n = 40,
+		random = d3.randomNormal(0, .2),
+		data = d3.range(n).map(random);
+	var svg = d3.select("svg"),
+		margin = {top: 20, right: 20, bottom: 20, left: 40},
 		width = +svg.attr("width") - margin.left - margin.right,
 		height = +svg.attr("height") - margin.top - margin.bottom,
 		g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -43,91 +44,64 @@ function drawGraph(state, el) {
 		.domain([0, n - 1])
 		.range([0, width]);
 	var y = d3.scaleLinear()
-		.domain([-2, 2])
+		.domain([-1, 1])
 		.range([height, 0]);
 	var line = d3.line()
-		.x(function (d, i) {
-			return x(i);
-		})
-		.y(function (d, i) {
-			return y(d);
-		});
+		.x(function(d, i) { return x(i); })
+		.y(function(d, i) { return y(d); });
 	g.append("defs").append("clipPath")
 		.attr("id", "clip")
 		.append("rect")
 		.attr("width", width)
 		.attr("height", height);
 	g.append("g")
-		.attr("class", "axis axis-x")
+		.attr("class", "axis axis--x")
 		.attr("transform", "translate(0," + y(0) + ")")
 		.call(d3.axisBottom(x));
 	g.append("g")
-		.attr("class", "axis axis-y")
+		.attr("class", "axis axis--y")
 		.call(d3.axisLeft(y));
 	g.append("g")
-		//.attr("clip-path", "url(#clip)")
+		.attr("clip-path", "url(#clip)")
 		.append("path")
 		.datum(data)
-		.attr("class", "line")
-		// .transition()
-		// .duration(500)
-		// .ease(d3.easeLinear);
-	function updateGraph(newPoint = 0) {
+		.attr("class", "line");
+	function update() {
 		// Push a new data point onto the back.
-		data.push(_.isArray(newPoint) ? newPoint[0] : newPoint);
-		let $line = $(el).find(".line");
-		if ($line.length === 0) {
-			return;
-		}
-
-		// Slide it to the left
-		// d3.active($line[0])
-		// 	.attr("transform", "translate(" + x(-1) + ",0)")
-		// 	.transition();
-		n = data.length;
-		x = d3.scaleLinear()
-			.domain([0, n - 1])
-			.range([0, width]);
-		if (n > 10) {
-			// Pop the old data point off the front.
-			data.shift();
-		}
+		data.push(random());
 		// Redraw the line.
-		d3.select($line[0])
+		d3.select($("svg .line")[0])
 			.attr("d", line)
-			// .attr("transform", "translate(" + x(-1) + ",0)");
+			.attr("transform", null)
+			.transition()
+			.duration(1000)
+			.ease(d3.easeLinear)
+			.on("start", () => {
+				// Slide it to the left.
+				d3.active($("svg .line")[0])
+					.attr("transform", "translate(" + x(-1) + ",0)");
+				// Pop the old data point off the front.
+				data.shift();
+			})
+			.on("end", () => {
+				store.dispatch({
+					type: ACTIONS.REQUEST_AGENT_DATA
+				});
+			});
 
 	}
-
-	return updateGraph;
-}
-
-function updateGraphs() {
-	$("svg").filter((i, el) => {
-		return $(el).data("updategraph");
-	})
-		.filter((i, el) => {
-			return Number.isFinite(parseFloat($(el).attr("data-val")))
-		})
-		.each((i, el) => {
-			$(el).data("updategraph")(parseFloat($(el).attr("data-val")));
-		});
-	$("svg").filter((i, el) => {
-		return !$(el).data("updategraph");
-	}).each((i, el) => {
-		$(el).data("updategraph", drawGraph(store.getState(), el));
-	});
+	return update;
 }
 
 window.addEventListener('load', () => {
 	const id = "mtconnect";
 	const container = document.getElementById(id);
-	// const updateGraphs = drawGraphs(store.getState());
+	let chartUpdate = drawCharts();
 	intent().subscribe(action => {
 		store.dispatch(action)
 	});
 	store$.map(view).startWith(container).pairwise().subscribe(([a, b]) => {
 		patch(a, b);
-		updateGraphs();
+		chartUpdate();
 	});
 });

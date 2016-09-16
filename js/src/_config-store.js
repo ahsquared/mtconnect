@@ -8,10 +8,9 @@ const x2js = new X2JS();
 
 const getDataEpic = action$ => action$.ofType(ACTIONS.REQUEST_AGENT_DATA)
 	.concatMap(() => {
-		return Rx.Observable.timer(0, 500).take(20).concatMap(() => {
-			return Rx.Observable.fromPromise(getAgentData());
-		});
+		return Rx.Observable.fromPromise(getAgentData());
 	})
+	.delay(1000)
 	.map((data) => ({
 		type: ACTIONS.STORE_AGENT_DATA,
 		data: x2js.xml_str2json(data)

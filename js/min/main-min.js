@@ -153,10 +153,9 @@ System.register("_config-store", ["_utilities", "_actions"], function(exports_3,
             x2js = new X2JS();
             getDataEpic = function (action$) { return action$.ofType(_actions_1.ACTIONS.REQUEST_AGENT_DATA)
                 .concatMap(function () {
-                return Rx.Observable.timer(0, 500).take(20).concatMap(function () {
-                    return Rx.Observable.fromPromise(_utilities_1.getAgentData());
-                });
+                return Rx.Observable.fromPromise(_utilities_1.getAgentData());
             })
+                .delay(1000)
                 .map(function (data) { return ({
                 type: _actions_1.ACTIONS.STORE_AGENT_DATA,
                 data: x2js.xml_str2json(data)
@@ -194,13 +193,6 @@ System.register("_view", [], function(exports_4, context_4) {
                     h("ul.sample", _.chain(s).map(function (ss) {
                         return h("li.sampleData", [
                             h("div", ss._dataItemId + ": " + (ss.__text || "N/A")),
-                            h("svg#" + ss._dataItemId, {
-                                attrs: {
-                                    "width": "400",
-                                    "height": "200",
-                                    "data-val": parseFloat(ss.__text)
-                                }
-                            })
                         ]);
                     }).value()),
                 ]);
@@ -242,7 +234,7 @@ System.register("_view", [], function(exports_4, context_4) {
         }
     }
 });
-/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, TweenMax, Stats, console */
+/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, crossfilter, dc, TweenMax, Stats, console */
 System.register("main", ["_actions", "_config-store", "_view"], function(exports_5, context_5) {
     "use strict";
     var __moduleName = context_5 && context_5.id;
@@ -268,83 +260,59 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
         }); });
         return Rx.Observable.merge(update$, getData$);
     }
-    function drawGraph(state, el) {
-        var data = state.data, n = data.length;
-        var svg = d3.select(el), margin = { top: 5, right: 5, bottom: 5, left: 5 }, width = +svg.attr("width") - margin.left - margin.right, height = +svg.attr("height") - margin.top - margin.bottom, g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    function drawCharts() {
+        var n = 40, random = d3.randomNormal(0, .2), data = d3.range(n).map(random);
+        var svg = d3.select("svg"), margin = { top: 20, right: 20, bottom: 20, left: 40 }, width = +svg.attr("width") - margin.left - margin.right, height = +svg.attr("height") - margin.top - margin.bottom, g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
         var x = d3.scaleLinear()
             .domain([0, n - 1])
             .range([0, width]);
         var y = d3.scaleLinear()
-            .domain([-2, 2])
+            .domain([-1, 1])
             .range([height, 0]);
         var line = d3.line()
-            .x(function (d, i) {
-            return x(i);
-        })
-            .y(function (d, i) {
-            return y(d);
-        });
+            .x(function (d, i) { return x(i); })
+            .y(function (d, i) { return y(d); });
         g.append("defs").append("clipPath")
             .attr("id", "clip")
             .append("rect")
             .attr("width", width)
             .attr("height", height);
         g.append("g")
-            .attr("class", "axis axis-x")
+            .attr("class", "axis axis--x")
             .attr("transform", "translate(0," + y(0) + ")")
             .call(d3.axisBottom(x));
         g.append("g")
-            .attr("class", "axis axis-y")
+            .attr("class", "axis axis--y")
             .call(d3.axisLeft(y));
         g.append("g")
+            .attr("clip-path", "url(#clip)")
             .append("path")
             .datum(data)
             .attr("class", "line");
-        // .transition()
-        // .duration(500)
-        // .ease(d3.easeLinear);
-        function updateGraph(newPoint) {
-            if (newPoint === void 0) { newPoint = 0; }
+        function update() {
             // Push a new data point onto the back.
-            data.push(_.isArray(newPoint) ? newPoint[0] : newPoint);
-            var $line = $(el).find(".line");
-            if ($line.length === 0) {
-                return;
-            }
-            // Slide it to the left
-            // d3.active($line[0])
-            // 	.attr("transform", "translate(" + x(-1) + ",0)")
-            // 	.transition();
-            n = data.length;
-            x = d3.scaleLinear()
-                .domain([0, n - 1])
-                .range([0, width]);
-            if (n > 10) {
+            data.push(random());
+            // Redraw the line.
+            d3.select($("svg .line")[0])
+                .attr("d", line)
+                .attr("transform", null)
+                .transition()
+                .duration(1000)
+                .ease(d3.easeLinear)
+                .on("start", function () {
+                // Slide it to the left.
+                d3.active($("svg .line")[0])
+                    .attr("transform", "translate(" + x(-1) + ",0)");
                 // Pop the old data point off the front.
                 data.shift();
-            }
-            // Redraw the line.
-            d3.select($line[0])
-                .attr("d", line);
-            // .attr("transform", "translate(" + x(-1) + ",0)");
+            })
+                .on("end", function () {
+                _config_store_1.store.dispatch({
+                    type: _actions_2.ACTIONS.REQUEST_AGENT_DATA
+                });
+            });
         }
-        return updateGraph;
-    }
-    function updateGraphs() {
-        $("svg").filter(function (i, el) {
-            return $(el).data("updategraph");
-        })
-            .filter(function (i, el) {
-            return Number.isFinite(parseFloat($(el).attr("data-val")));
-        })
-            .each(function (i, el) {
-            $(el).data("updategraph")(parseFloat($(el).attr("data-val")));
-        });
-        $("svg").filter(function (i, el) {
-            return !$(el).data("updategraph");
-        }).each(function (i, el) {
-            $(el).data("updategraph", drawGraph(_config_store_1.store.getState(), el));
-        });
+        return update;
     }
     return {
         setters:[
@@ -362,14 +330,14 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
             window.addEventListener('load', function () {
                 var id = "mtconnect";
                 var container = document.getElementById(id);
-                // const updateGraphs = drawGraphs(store.getState());
+                var chartUpdate = drawCharts();
                 intent().subscribe(function (action) {
                     _config_store_1.store.dispatch(action);
                 });
                 _config_store_1.store$.map(_view_1.view).startWith(container).pairwise().subscribe(function (_a) {
                     var a = _a[0], b = _a[1];
                     patch(a, b);
-                    updateGraphs();
+                    chartUpdate();
                 });
             });
         }
