@@ -1,3 +1,5 @@
+/*global h, _ */
+
 function listData(componentStream) {
 	let data = [],
 		graph = false;
@@ -9,7 +11,7 @@ function listData(componentStream) {
 	} else if (componentStream.Condition) {
 		data = componentStream.Condition;
 	}
-	return h("ul.data", _.chain(data).map((s, k) => {
+	return h("ul.data", _.chain(data).map((s) => {
 		if (_.isArray(s)) {
 			return h("li", [
 				h("ul.sample", _.chain(s).map(ss => {

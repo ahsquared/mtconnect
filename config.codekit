@@ -529,17 +529,6 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
-	"\/js\/libs\/rickshaw.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/rickshaw.min.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/rickshaw.min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
 	"\/js\/libs\/Rx.umd.min.js": {
 		"fileType": 64,
 		"ignore": 1,

@@ -1,11 +1,11 @@
-/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, crossfilter, dc, TweenMax, Stats, console */
+/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, Stats, console */
 
-import {delegate, getAgentData} from "./_utilities";
+import { createTimer } from "./_utilities";
 import {ACTIONS} from "./_actions";
 import {store, store$} from "./_config-store";
 import {view} from "./_view";
 
-const patch = snabbdom.init([snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes])
+const patch = snabbdom.init([snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes]);
 
 function intent() {
 	// const click$ = delegate(document.body, id, "click");
@@ -15,9 +15,14 @@ function intent() {
 		.filter(ev => {
 			return _.includes(ev.target.className, "title");
 		})
-		.map(ev => ({
+		.map(() => ({
 			type: ACTIONS.CHANGE_TITLE,
 			data: "The title has been updated."
+		}));
+
+	const agentData$ = Rx.Observable.timer(0, 1000).take(10)
+		.map(() => ({
+			type: ACTIONS.FETCH_AGENT_DATA
 		}));
 
 	const getData$ = click$
@@ -25,16 +30,16 @@ function intent() {
 			return _.includes(ev.target.className, "get-data");
 		})
 		.map(() => ({
-			type: ACTIONS.REQUEST_AGENT_DATA
+			type: ACTIONS.FETCH_AGENT_DATA
 		}));
 
-	return Rx.Observable.merge(update$, getData$);
+	return Rx.Observable.merge(update$, agentData$, getData$);
 }
 
 function drawCharts() {
 	var n = 40,
-		random = d3.randomNormal(0, .2),
-		data = d3.range(n).map(random);
+		initValue = () => 0,
+		data = d3.range(n).map(initValue);
 	var svg = d3.select("svg"),
 		margin = {top: 20, right: 20, bottom: 20, left: 40},
 		width = +svg.attr("width") - margin.left - margin.right,
@@ -44,11 +49,11 @@ function drawCharts() {
 		.domain([0, n - 1])
 		.range([0, width]);
 	var y = d3.scaleLinear()
-		.domain([-1, 1])
+		.domain([-3, 3])
 		.range([height, 0]);
 	var line = d3.line()
 		.x(function(d, i) { return x(i); })
-		.y(function(d, i) { return y(d); });
+		.y(function(d) { return y(d); });
 	g.append("defs").append("clipPath")
 		.attr("id", "clip")
 		.append("rect")
@@ -66,15 +71,16 @@ function drawCharts() {
 		.append("path")
 		.datum(data)
 		.attr("class", "line");
-	function update() {
+	function update(state) {
 		// Push a new data point onto the back.
-		data.push(random());
+		let timeDiff = state.fetchTime,
+			newValue = state.agentData ? state.agentData.MTConnectStreams.Streams.DeviceStream.ComponentStream[7].Samples.Position[0] : 0;
+		data.push(newValue);
 		// Redraw the line.
 		d3.select($("svg .line")[0])
 			.attr("d", line)
-			.attr("transform", null)
 			.transition()
-			.duration(1000)
+			.duration(Math.max(0, 1000 - timeDiff))
 			.ease(d3.easeLinear)
 			.on("start", () => {
 				// Slide it to the left.
@@ -82,13 +88,7 @@ function drawCharts() {
 					.attr("transform", "translate(" + x(-1) + ",0)");
 				// Pop the old data point off the front.
 				data.shift();
-			})
-			.on("end", () => {
-				store.dispatch({
-					type: ACTIONS.REQUEST_AGENT_DATA
-				});
 			});
-
 	}
 	return update;
 }
@@ -101,7 +101,10 @@ window.addEventListener('load', () => {
 		store.dispatch(action)
 	});
 	store$.map(view).startWith(container).pairwise().subscribe(([a, b]) => {
+		let state = store.getState();
 		patch(a, b);
-		chartUpdate();
+		if (!state.fetchingData) {
+			chartUpdate(state);
+		}
 	});
 });

@@ -1,20 +1,27 @@
-/* global Rx, Redux, ReduxObservable, devToolsExtension, X2JS, d3 */
+/* global Rx, Redux, ReduxObservable, X2JS, d3 */
 
-import { delegate, getAgentData } from "./_utilities";
+import { getAgentData } from "./_utilities";
 import { ACTIONS } from "./_actions";
 const { createStore, applyMiddleware, compose } = Redux;
 const { createEpicMiddleware } = ReduxObservable;
 const x2js = new X2JS();
 
-const getDataEpic = action$ => action$.ofType(ACTIONS.REQUEST_AGENT_DATA)
+const getDataEpic = action$ => action$.ofType(ACTIONS.FETCH_AGENT_DATA)
 	.concatMap(() => {
-		return Rx.Observable.fromPromise(getAgentData());
-	})
-	.delay(1000)
-	.map((data) => ({
-		type: ACTIONS.STORE_AGENT_DATA,
-		data: x2js.xml_str2json(data)
-	}));
+		return Rx.Observable.fromPromise(getAgentData())
+			// .bufferTime(1000)
+			.map((response) => ({
+				type: ACTIONS.FETCH_AGENT_DATA_FULFILLED,
+				data: x2js.xml_str2json(response.data)
+			}))
+			.catch(error => ({
+				type: ACTIONS.FETCH_AGENT_DATA_FAILED,
+				data: {
+					payload: error,
+					error: true
+				}
+			}));
+	});
 
 const epicMiddleware = createEpicMiddleware(getDataEpic);
 
@@ -31,13 +38,16 @@ function reducer(state = initState, action) {
 			return Object.assign({}, state, {
 				title: action.data
 			});
-		case ACTIONS.REQUEST_AGENT_DATA:
+		case ACTIONS.FETCH_AGENT_DATA:
 			return Object.assign({}, state, {
-				fetchingData: true
+				fetchingData: true,
+				fetchStartTime: Date.now()
 			});
-		case ACTIONS.STORE_AGENT_DATA:
+		case ACTIONS.FETCH_AGENT_DATA_FULFILLED:
 			return Object.assign({}, state, {
 				fetchingData: false,
+				fetchEndTime: Date.now(),
+				fetchTime: Date.now() - state.fetchStartTime,
 				agentData: action.data,
 			});
 		default:
@@ -48,7 +58,7 @@ function reducer(state = initState, action) {
 export const store = createStore(reducer,
 	compose(
 		applyMiddleware(epicMiddleware),
-		window.devToolsExtension ? window.devToolsExtension() : f => f
+		window.devToolsExtension ? window.devToolsExtension() : (f => f)
 	)
 );
 export const store$ = Rx.Observable.from(store);

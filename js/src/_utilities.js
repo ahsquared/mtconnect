@@ -1,8 +1,9 @@
-/*global vdomVirtualize, virtualDom */
+/*global $, Promise, System, _, Rx, Redux */
+
+import {ACTIONS} from "./_actions";
 
 (function () {
-	let i,
-		method,
+	let method,
 		methods = [
 			'assert', 'clear', 'count', 'debug', 'dir', 'dirxml', 'error',
 			'exception', 'group', 'groupCollapsed', 'groupEnd', 'info', 'log',
@@ -24,10 +25,6 @@
 		}
 	}
 })();
-
-export function getVNodeFromHMTL(html) {
-	return convertHTML(html);
-}
 
 export function setupMixins() {
 	_.mixin({
@@ -64,17 +61,26 @@ export function delegate(wrapper, selector, eventNames) {
 
 export function getAgentData() {
 	// get image mapping file for Interior viewer and update store
-	let url = "http://agent.mtconnect.org/current&_=" + Date.now(),
+	let startTime = Date.now(),
+		url = "http://agent.mtconnect.org/current&_=" + startTime,
 		p = new Promise(function (resolve, reject) {
-		$.ajax({
-			url: "/agent-data-loader.php?url=" + url
-		}).done(function (data) {
-			resolve(data);
-		}).fail(function (e) {
-			reject("failed to get interior map", e);
+			$.ajax({
+				url: "/agent-data-loader.php?url=" + url
+			}).done(function (data) {
+				resolve({
+					data,
+					startTime
+				});
+			}).fail(function (e) {
+				reject("failed to get interior map", e);
+			});
 		});
-	});
 	return p;
+}
+
+export function createTimer(interval) {
+	return Rx.Observable.timer(0, interval)
+		.share();
 }
 
 // element-closest | CC0-1.0 | github.com/jonathantneal/closest

@@ -1,11 +1,23 @@
-/*global vdomVirtualize, virtualDom */
-System.register("_utilities", [], function(exports_1, context_1) {
+System.register("_actions", [], function(exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    function getVNodeFromHMTL(html) {
-        return convertHTML(html);
+    var ACTIONS;
+    return {
+        setters:[],
+        execute: function() {
+            exports_1("ACTIONS", ACTIONS = {
+                CHANGE_TITLE: "CHANGE_TITLE",
+                FETCH_AGENT_DATA: "FETCH_AGENT_DATA",
+                FETCH_AGENT_DATA_FULFILLED: "FETCH_AGENT_DATA_FULFILLED",
+                FETCH_AGENT_DATA_FAILED: "FETCH_AGENT_DATA_FAILED"
+            });
+        }
     }
-    exports_1("getVNodeFromHMTL", getVNodeFromHMTL);
+});
+/*global $, Promise, System, _, Rx, Redux */
+System.register("_utilities", [], function(exports_2, context_2) {
+    "use strict";
+    var __moduleName = context_2 && context_2.id;
     function setupMixins() {
         _.mixin({
             deepPluck: function (obj, path) {
@@ -25,7 +37,7 @@ System.register("_utilities", [], function(exports_1, context_1) {
             }
         });
     }
-    exports_1("setupMixins", setupMixins);
+    exports_2("setupMixins", setupMixins);
     function delegate(wrapper, selector, eventNames) {
         return Rx.Observable.from(eventNames.split(",")).mergeMap(function (eventName) {
             return Rx.Observable.fromEvent(wrapper, eventName.replace(/\s/g, ""), function (e) {
@@ -35,26 +47,34 @@ System.register("_utilities", [], function(exports_1, context_1) {
             return x.delegate !== null;
         });
     }
-    exports_1("delegate", delegate);
+    exports_2("delegate", delegate);
     function getAgentData() {
         // get image mapping file for Interior viewer and update store
-        var url = "http://agent.mtconnect.org/current&_=" + Date.now(), p = new Promise(function (resolve, reject) {
+        var startTime = Date.now(), url = "http://agent.mtconnect.org/current&_=" + startTime, p = new Promise(function (resolve, reject) {
             $.ajax({
                 url: "/agent-data-loader.php?url=" + url
             }).done(function (data) {
-                resolve(data);
+                resolve({
+                    data: data,
+                    startTime: startTime
+                });
             }).fail(function (e) {
                 reject("failed to get interior map", e);
             });
         });
         return p;
     }
-    exports_1("getAgentData", getAgentData);
+    exports_2("getAgentData", getAgentData);
+    function createTimer(interval) {
+        return Rx.Observable.timer(0, interval)
+            .share();
+    }
+    exports_2("createTimer", createTimer);
     return {
         setters:[],
         execute: function() {
             (function () {
-                var i, method, methods = [
+                var method, methods = [
                     'assert', 'clear', 'count', 'debug', 'dir', 'dirxml', 'error',
                     'exception', 'group', 'groupCollapsed', 'groupEnd', 'info', 'log',
                     'markTimeline', 'profile', 'profileEnd', 'table', 'time', 'timeEnd',
@@ -98,22 +118,7 @@ System.register("_utilities", [], function(exports_1, context_1) {
     }
 });
 // end element-closest polyfill 
-System.register("_actions", [], function(exports_2, context_2) {
-    "use strict";
-    var __moduleName = context_2 && context_2.id;
-    var ACTIONS;
-    return {
-        setters:[],
-        execute: function() {
-            exports_2("ACTIONS", ACTIONS = {
-                CHANGE_TITLE: "CHANGE_TITLE",
-                REQUEST_AGENT_DATA: "REQUEST_AGENT_DATA",
-                STORE_AGENT_DATA: "STORE_AGENT_DATA"
-            });
-        }
-    }
-});
-/* global Rx, Redux, ReduxObservable, devToolsExtension, X2JS, d3 */
+/* global Rx, Redux, ReduxObservable, X2JS, d3 */
 System.register("_config-store", ["_utilities", "_actions"], function(exports_3, context_3) {
     "use strict";
     var __moduleName = context_3 && context_3.id;
@@ -126,13 +131,16 @@ System.register("_config-store", ["_utilities", "_actions"], function(exports_3,
                 return Object.assign({}, state, {
                     title: action.data
                 });
-            case _actions_1.ACTIONS.REQUEST_AGENT_DATA:
+            case _actions_1.ACTIONS.FETCH_AGENT_DATA:
                 return Object.assign({}, state, {
-                    fetchingData: true
+                    fetchingData: true,
+                    fetchStartTime: Date.now()
                 });
-            case _actions_1.ACTIONS.STORE_AGENT_DATA:
+            case _actions_1.ACTIONS.FETCH_AGENT_DATA_FULFILLED:
                 return Object.assign({}, state, {
                     fetchingData: false,
+                    fetchEndTime: Date.now(),
+                    fetchTime: Date.now() - state.fetchStartTime,
                     agentData: action.data
                 });
             default:
@@ -151,15 +159,21 @@ System.register("_config-store", ["_utilities", "_actions"], function(exports_3,
             createStore = Redux.createStore, applyMiddleware = Redux.applyMiddleware, compose = Redux.compose;
             createEpicMiddleware = ReduxObservable.createEpicMiddleware;
             x2js = new X2JS();
-            getDataEpic = function (action$) { return action$.ofType(_actions_1.ACTIONS.REQUEST_AGENT_DATA)
+            getDataEpic = function (action$) { return action$.ofType(_actions_1.ACTIONS.FETCH_AGENT_DATA)
                 .concatMap(function () {
-                return Rx.Observable.fromPromise(_utilities_1.getAgentData());
-            })
-                .delay(1000)
-                .map(function (data) { return ({
-                type: _actions_1.ACTIONS.STORE_AGENT_DATA,
-                data: x2js.xml_str2json(data)
-            }); }); };
+                return Rx.Observable.fromPromise(_utilities_1.getAgentData())
+                    .map(function (response) { return ({
+                    type: _actions_1.ACTIONS.FETCH_AGENT_DATA_FULFILLED,
+                    data: x2js.xml_str2json(response.data)
+                }); })
+                    .catch(function (error) { return ({
+                    type: _actions_1.ACTIONS.FETCH_AGENT_DATA_FAILED,
+                    data: {
+                        payload: error,
+                        error: true
+                    }
+                }); });
+            }); };
             epicMiddleware = createEpicMiddleware(getDataEpic);
             initState = {
                 title: "The visualizer",
@@ -167,11 +181,12 @@ System.register("_config-store", ["_utilities", "_actions"], function(exports_3,
                 agentData: null,
                 data: [0]
             };
-            exports_3("store", store = createStore(reducer, compose(applyMiddleware(epicMiddleware), window.devToolsExtension ? window.devToolsExtension() : function (f) { return f; })));
+            exports_3("store", store = createStore(reducer, compose(applyMiddleware(epicMiddleware), window.devToolsExtension ? window.devToolsExtension() : (function (f) { return f; }))));
             exports_3("store$", store$ = Rx.Observable.from(store));
         }
     }
 });
+/*global h, _ */
 System.register("_view", [], function(exports_4, context_4) {
     "use strict";
     var __moduleName = context_4 && context_4.id;
@@ -187,7 +202,7 @@ System.register("_view", [], function(exports_4, context_4) {
         else if (componentStream.Condition) {
             data = componentStream.Condition;
         }
-        return h("ul.data", _.chain(data).map(function (s, k) {
+        return h("ul.data", _.chain(data).map(function (s) {
             if (_.isArray(s)) {
                 return h("li", [
                     h("ul.sample", _.chain(s).map(function (ss) {
@@ -234,7 +249,7 @@ System.register("_view", [], function(exports_4, context_4) {
         }
     }
 });
-/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, crossfilter, dc, TweenMax, Stats, console */
+/*global System, $, Promise, _, snabbdom, h, snabbdom_class, snabbdom_props, snabbdom_style, snabbdom_attributes, Redux, Rx, d3, Stats, console */
 System.register("main", ["_actions", "_config-store", "_view"], function(exports_5, context_5) {
     "use strict";
     var __moduleName = context_5 && context_5.id;
@@ -247,31 +262,35 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
             .filter(function (ev) {
             return _.includes(ev.target.className, "title");
         })
-            .map(function (ev) { return ({
+            .map(function () { return ({
             type: _actions_2.ACTIONS.CHANGE_TITLE,
             data: "The title has been updated."
+        }); });
+        var agentData$ = Rx.Observable.timer(0, 1000).take(10)
+            .map(function () { return ({
+            type: _actions_2.ACTIONS.FETCH_AGENT_DATA
         }); });
         var getData$ = click$
             .filter(function (ev) {
             return _.includes(ev.target.className, "get-data");
         })
             .map(function () { return ({
-            type: _actions_2.ACTIONS.REQUEST_AGENT_DATA
+            type: _actions_2.ACTIONS.FETCH_AGENT_DATA
         }); });
-        return Rx.Observable.merge(update$, getData$);
+        return Rx.Observable.merge(update$, agentData$, getData$);
     }
     function drawCharts() {
-        var n = 40, random = d3.randomNormal(0, .2), data = d3.range(n).map(random);
+        var n = 40, initValue = function () { return 0; }, data = d3.range(n).map(initValue);
         var svg = d3.select("svg"), margin = { top: 20, right: 20, bottom: 20, left: 40 }, width = +svg.attr("width") - margin.left - margin.right, height = +svg.attr("height") - margin.top - margin.bottom, g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
         var x = d3.scaleLinear()
             .domain([0, n - 1])
             .range([0, width]);
         var y = d3.scaleLinear()
-            .domain([-1, 1])
+            .domain([-3, 3])
             .range([height, 0]);
         var line = d3.line()
             .x(function (d, i) { return x(i); })
-            .y(function (d, i) { return y(d); });
+            .y(function (d) { return y(d); });
         g.append("defs").append("clipPath")
             .attr("id", "clip")
             .append("rect")
@@ -289,15 +308,15 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
             .append("path")
             .datum(data)
             .attr("class", "line");
-        function update() {
+        function update(state) {
             // Push a new data point onto the back.
-            data.push(random());
+            var timeDiff = state.fetchTime, newValue = state.agentData ? state.agentData.MTConnectStreams.Streams.DeviceStream.ComponentStream[7].Samples.Position[0] : 0;
+            data.push(newValue);
             // Redraw the line.
             d3.select($("svg .line")[0])
                 .attr("d", line)
-                .attr("transform", null)
                 .transition()
-                .duration(1000)
+                .duration(Math.max(0, 1000 - timeDiff))
                 .ease(d3.easeLinear)
                 .on("start", function () {
                 // Slide it to the left.
@@ -305,11 +324,6 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
                     .attr("transform", "translate(" + x(-1) + ",0)");
                 // Pop the old data point off the front.
                 data.shift();
-            })
-                .on("end", function () {
-                _config_store_1.store.dispatch({
-                    type: _actions_2.ACTIONS.REQUEST_AGENT_DATA
-                });
             });
         }
         return update;
@@ -336,8 +350,11 @@ System.register("main", ["_actions", "_config-store", "_view"], function(exports
                 });
                 _config_store_1.store$.map(_view_1.view).startWith(container).pairwise().subscribe(function (_a) {
                     var a = _a[0], b = _a[1];
+                    var state = _config_store_1.store.getState();
                     patch(a, b);
-                    chartUpdate();
+                    if (!state.fetchingData) {
+                        chartUpdate(state);
+                    }
                 });
             });
         }
